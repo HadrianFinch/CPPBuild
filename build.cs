@@ -304,7 +304,7 @@ namespace Build
                 bc.defines.Add(defineElement.InnerText);
             }
             
-            XmlNodeList includeNodes = buildElm.GetElementsByTagName("define");
+            XmlNodeList includeNodes = buildElm.GetElementsByTagName("include");
             foreach (XmlNode includeNode in includeNodes)
             {
                 XmlElement includeElement = includeNode as XmlElement;
@@ -399,6 +399,8 @@ namespace Build
 
                             XmlNodeList containerNodes = modDoc.GetElementsByTagName("module");
                             BuildComponents bc = GetBuildComponentsFromXMLElement(containerNodes[0] as XmlElement);
+
+                            bcBase = bcBase + bc;
                         }
                     }
                     
@@ -424,6 +426,24 @@ namespace Build
             public string output = "";
             public string resourceRC = "";
             public string manifest = "";
+
+            public static BuildComponents operator+ (BuildComponents a, BuildComponents b)
+            {
+                BuildComponents c = new BuildComponents();
+
+                c.sources.AddRange(a.sources ); 
+                c.sources.AddRange(b.sources);
+                c.defines.AddRange(a.defines ); 
+                c.defines.AddRange(b.defines);
+                c.includes.AddRange(a.includes);
+                c.includes.AddRange(b.includes);
+
+                c.output = a.output;
+                c.resourceRC = a.resourceRC;
+                c.manifest = a.manifest;
+
+                return c;
+            }
         }
 
         public static string GetResourceNameFromRCname(string filepath)
@@ -451,7 +471,7 @@ namespace Build
 
         public static string GenerateBuildCommand(BuildComponents bc)
         {
-            string buildstring = "cl.exe /W0 /Zi /EHsc /nologo ";
+            string buildstring = "cl.exe /W0 /Zi /EHsc /std:c++17 /nologo ";
             
             foreach (string file in bc.sources)
             {
