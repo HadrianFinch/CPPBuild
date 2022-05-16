@@ -1,0 +1,1 @@
+csc.exe build.cs -define:BUILDBUILD -out:CPPBuild.exe
