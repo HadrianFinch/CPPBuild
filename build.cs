@@ -1,4 +1,4 @@
-// #define BUILDBUILD
+#define BUILDBUILD
 
 using System;
 using System.Collections;
@@ -65,14 +65,16 @@ namespace Build
                     return -2;
                 }
 
-
                 foreach (BuildCommand buildTarget in commands)
                 {
                     // Compile Resource
                     int retcode = 0;
-                    if (!string.IsNullOrEmpty(buildTarget.resourceName))
+                    foreach (string resourceName in buildTarget.resourceNames)
                     {
-                        PreBuild(); Console.WriteLine("Compiling Resource {0}", buildTarget.resourceName);
+                        PreBuild(); Console.WriteLine("Compiling Resource {0}", resourceName);
+                    }
+                    if (buildTarget.resourceNames.Count != 0)
+                    {
 
                         Console.ForegroundColor = ConsoleColor.Red;
                         retcode = buildTarget.CompileResources();
@@ -222,14 +224,14 @@ namespace Build
         [DllImport("msvcrt.dll")]
         private static extern int system(string format);
 
-        public BuildCommand(string name, string command, string manifest, string resource, string resourceName, string manifestName, bool isDefault = false)
+        public BuildCommand(string name, string command, string manifest, string resource, List<string> resourceNames, string manifestName, bool isDefault = false)
         {
             buildName = name;
             buildCommand = command;
             isDefaultBuild = isDefault;
             manifestCommand = manifest;
             resourceCommand = resource;
-            this.resourceName = resourceName;
+            this.resourceNames = resourceNames;
             this.manifestName = manifestName;
         }
 
@@ -237,7 +239,7 @@ namespace Build
         public string buildName {get; private set;} = "";
         public string manifestCommand {get; private set;} = "";
         public string resourceCommand {get; private set;} = "";
-        public string resourceName {get; private set;} = "";
+        public List<string> resourceNames {get; private set;} = new List<string>();
         public string manifestName {get; private set;} = "";
 
         public bool isDefaultBuild {get; private set;} = false;
@@ -326,10 +328,10 @@ namespace Build
             }
 
             XmlNodeList resourceRCNodes = buildElm.GetElementsByTagName("resource");
-            if (resourceRCNodes.Count == 1)
+            foreach (XmlNode resourceRCNode in resourceRCNodes)
             {
-                XmlElement resourceRCElement = resourceRCNodes[0] as XmlElement;
-                bc.resourceRC = resourceRCElement.InnerText;
+                XmlElement resourceRCElement = resourceRCNode as XmlElement;
+                bc.resourceRCs.Add(resourceRCElement.InnerText);
             }
 
             return bc;
@@ -408,9 +410,9 @@ namespace Build
                     string compileCommand = GenerateBuildCommand(bcBase);
                     
                     string manifestCommand = GenerateManifestCommand(bcBase.manifest, bcBase.output);
-                    string resourceCommand = GenerateResourceCommand(bcBase.resourceRC);
+                    string resourceCommand = GenerateResourceCommand(bcBase.resourceRCs);
 
-                    commands.Add(new BuildCommand(buildElm.GetAttribute("name"), compileCommand, manifestCommand, resourceCommand, bcBase.resourceRC, bcBase.manifest, isDefault));
+                    commands.Add(new BuildCommand(buildElm.GetAttribute("name"), compileCommand, manifestCommand, resourceCommand, bcBase.resourceRCs, bcBase.manifest, isDefault));
                 }
                 // else { dont build this target }
             }
@@ -423,8 +425,8 @@ namespace Build
             public List<string> sources = new List<string>();
             public List<string> defines = new List<string>();
             public List<string> includes = new List<string>();
+            public List<string> resourceRCs = new List<string>();
             public string output = "";
-            public string resourceRC = "";
             public string manifest = "";
 
             public static BuildComponents operator+ (BuildComponents a, BuildComponents b)
@@ -437,10 +439,19 @@ namespace Build
                 c.defines.AddRange(b.defines);
                 c.includes.AddRange(a.includes);
                 c.includes.AddRange(b.includes);
+                c.resourceRCs.AddRange(a.resourceRCs);
+                c.resourceRCs.AddRange(b.resourceRCs);
 
                 c.output = a.output;
-                c.resourceRC = a.resourceRC;
-                c.manifest = a.manifest;
+
+                if (!string.IsNullOrEmpty(a.manifest))
+                {
+                    c.manifest = a.manifest;
+                }
+                else
+                {
+                    c.manifest = b.manifest;
+                }
 
                 return c;
             }
@@ -450,21 +461,34 @@ namespace Build
         {
             if (!string.IsNullOrEmpty(filepath))
             {
-                return filepath.Substring(0, filepath.Length - 3) + "res";
+                return filepath.Substring(0, filepath.Length - 3) + ".res";
             }
             return filepath;
         }
 
-        public static string GenerateResourceCommand(string filepath)
+        public static string GenerateResourceCommand(List<string> filepaths)
         {
-            return "rc.exe /nologo " + filepath;
+            string str = "";
+            int i = 0;
+            foreach (string path in filepaths)
+            {
+                str += ("rc.exe /nologo " + path);
+
+                if (i != filepaths.Count - 1)
+                {
+                    str += " && ";
+                }
+
+                i++;
+            }
+            return str;
         }
 
         public static string GenerateManifestCommand(string filepath, string targetExePath)
         {
             if (!string.IsNullOrEmpty(filepath))
             {
-                return "mt.exe -manifest " + filepath + " -outputresource:" + targetExePath + ";1";
+                return "mt.exe -nologo -manifest " + filepath + " -outputresource:" + targetExePath + ";1";
             }
             return filepath;
         }
@@ -493,9 +517,13 @@ namespace Build
                 buildstring += ("/Fe: " + bc.output + " ");
             }
 
-            if (!string.IsNullOrEmpty(GetResourceNameFromRCname(bc.resourceRC)))
+            if (bc.resourceRCs.Count != 0)
             {
-                buildstring += "/link /SUBSYSTEM:WINDOWS " + GetResourceNameFromRCname(bc.resourceRC);
+                buildstring += "/link /SUBSYSTEM:WINDOWS ";
+                foreach (string name in bc.resourceRCs)
+                {
+                    buildstring += (GetResourceNameFromRCname(name) + " ");
+                }
             }
 
             return buildstring;
