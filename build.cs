@@ -196,7 +196,7 @@ namespace Build
         }
         private static void PostBuild()
         {
-            Console.ForegroundColor = ConsoleColor.DarkGreen;
+            Console.ForegroundColor = ConsoleColor.Magenta;
             Console.Write("[Post Build] ");
         }
         private static void Error()
