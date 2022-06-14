@@ -1,6 +1,6 @@
-/test.cpp
-/test.obj
-/TestApp.exe
-/TestApp.ilk
-/TestApp.pdb
-/buildscript.bml
+*.cpp
+*.obj
+*.exe
+*.ilk
+*.pdb
+*.bml
