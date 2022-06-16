@@ -1,0 +1,10 @@
+<project>
+    <build name="TestApp" default="true">
+        <source>test.cpp</source>
+
+        <output>TestApp.exe</output>
+    </build>
+    
+    <modules>
+    <module>DynamicWindow3</module></modules>
+</project>

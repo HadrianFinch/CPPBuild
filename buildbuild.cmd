@@ -1,1 +1,1 @@
-csc.exe build.cs -define:BUILDBUILD -out:CPPBuild.exe
+csc.exe build.cs pacman.cs -define:BUILDBUILD -out:CPPBuild.exe

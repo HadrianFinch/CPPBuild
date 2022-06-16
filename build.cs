@@ -1,4 +1,3 @@
-#define BUILDBUILD
 
 using System;
 using System.Collections;
@@ -6,6 +5,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Xml;
 using System.Runtime.InteropServices;
+
+using PacMan;
 
 namespace Build
 {
@@ -73,9 +74,9 @@ namespace Build
                     {
                         PreBuild(); Console.WriteLine("Compiling Resource {0}", resourceName);
                     }
+
                     if (buildTarget.resourceNames.Count != 0)
                     {
-
                         Console.ForegroundColor = ConsoleColor.Red;
                         retcode = buildTarget.CompileResources();
                         
@@ -260,17 +261,6 @@ namespace Build
         }
     }
 
-    public class ModuleInfo
-    {
-        [DllImport("msvcrt.dll")]
-        private static extern int system(string format);
-
-        public string name = "";
-        public string gitURL = "";
-        public string modfilePath => ("modules\\" + name + "\\module.mod");
-        public bool loaded => System.IO.File.Exists(modfilePath);
-    }
-
     public static class Builder
     {
         public enum XMLBuildTargets
@@ -280,11 +270,10 @@ namespace Build
             ByName
         }
 
-        private static ModuleInfo ModuleFromXmlElement(XmlElement moduleElm)
+        private static Project.ModuleInfo ModuleFromXmlElement(XmlElement moduleElm)
         {
-            ModuleInfo mod = new ModuleInfo();
-            mod.name = moduleElm.GetAttribute("name");
-            mod.gitURL = moduleElm.GetAttribute("giturl");
+            Project.ModuleInfo mod = new Project.ModuleInfo();
+            mod.name = moduleElm.InnerText;
             return mod;
         }
 
@@ -375,7 +364,7 @@ namespace Build
                     // Get from XML
                     BuildComponents bcBase = GetBuildComponentsFromXMLElement(buildElm);
 
-                    XmlNodeList modulesNodes = buildElm.GetElementsByTagName("modules");
+                    XmlNodeList modulesNodes = doc.GetElementsByTagName("modules");
                     if (modulesNodes.Count == 1)
                     {
                         XmlElement modulesElm = modulesNodes[0] as XmlElement;
@@ -384,7 +373,7 @@ namespace Build
                         foreach (XmlNode moduleNode in moduleNodes)
                         {
                             XmlElement moduleElm = moduleNode as XmlElement;
-                            ModuleInfo mod = ModuleFromXmlElement(moduleElm);
+                            Project.ModuleInfo mod = ModuleFromXmlElement(moduleElm);
 
                             XmlDocument modDoc = new XmlDocument();
                             modDoc.PreserveWhitespace = true;

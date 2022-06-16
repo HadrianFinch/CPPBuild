@@ -1,0 +1,1 @@
+csc.exe pacman.cs -define:PACMANBUILD -out:pacman.exe
