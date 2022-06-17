@@ -1,10 +1,10 @@
 <project>
-    <build name="TestApp" default="true">
-        <source>test.cpp</source>
+    <build name="FoobarTest" default="true">
+        <source>*.cpp</source>
+        <output>FoobarTest.exe</output>
+        <define></define><include></include></build>
 
-        <output>TestApp.exe</output>
-    </build>
-    
     <modules>
-    <module>DynamicWindow3</module></modules>
+        
+    </modules>
 </project>

@@ -23,13 +23,19 @@ namespace PacMan
             ServicePointManager.Expect100Continue = true;
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
 
+            bool invalidCommand = false;
+
             if ((paramaters[0] != "--help") && (paramaters[0] != "-h") &&
                 (paramaters[0] != "/?") && (paramaters[0] != "/h"))
             {
                 PrintHeadder();
 
-                Project project = new Project();
-                project.Initilize(GetProjectFilePathFromDirectory());
+                Project project = null;
+                if (paramaters[0] != "init")
+                {
+                    project = new Project();
+                    project.Initilize(GetProjectFilePathFromDirectory());
+                }
 
                 switch (paramaters[0])
                 {
@@ -40,7 +46,8 @@ namespace PacMan
                         if (project.modules.Select((e) => e.name).Contains(moduleName))
                         {
                             Error();
-                            Console.WriteLine("A module named \"{0}\" already is installed. To update this module use \"pacman update {0}\"", moduleName);
+                            Console.WriteLine("A module named \"{0}\" already is installed. To update this module use \"pacman update {1}\"", moduleName, moduleName);
+                            invalidCommand = true;
                             break;
                         }
 
@@ -66,33 +73,178 @@ namespace PacMan
                     }
                     break;
 
-                    case "update":
+                    // case "update":
+                    // {
+                    //     List<Project.ModuleInfo> modulesToUpdate = new List<Project.ModuleInfo>();
+                    //     if (paramaters.Length > 1)
+                    //     {
+                    //         for (int i = 1; i < paramaters.Length; i++)
+                    //         {
+                    //             string name = paramaters[i];
+                    //             Project.ModuleInfo mod = project.GetModuleByName(name);
+
+                    //             if (mod == null)
+                    //             {
+                    //                 Error();
+                    //                 Console.WriteLine("No installed module with name {0} could be found!", name);
+                    //                 invalidCommand = true;
+                    //                 break;
+                    //             }
+
+                    //             modulesToUpdate.Add(mod);
+                    //         }
+                    //     }
+                    //     else
+                    //     {
+
+                    //     }
+                    // }
+                    // break;
+
+                    // case "upgrade":
+                    // {
+
+                    // }
+                    // break;
+
+                    case "status":
                     {
-
-                    }
-                    break;
-
-                    case "upgrade":
-                    {
-
+                        // It just needs to not default in order to print the status
                     }
                     break;
 
                     case "init":
                     {
+                        string appName;
+                        string manifest;
+                        string resource;
+                        List<string> defines;
+                        List<string> includes;
 
+                        Console.ForegroundColor = ConsoleColor.DarkBlue;
+                        Console.Write("[project setup] Setting up folder for a new project\n[project setup] What is the name of the app: ");
+                        appName = Console.ReadLine();
+
+                        Console.Write("[project setup] [build setup] Manifest file (hit \"enter\" for none): ");
+                        manifest = Console.ReadLine();
+
+                        Console.Write("[project setup] [build setup] resource file (hit \"enter\" for none): ");
+                        resource = Console.ReadLine();
+
+                        Console.Write("[project setup] [build setup] compile-time #defines (seprated by spaces) (hit \"enter\" for none): ");
+                        defines = (Console.ReadLine().Split(' ').ToList());
+
+                        Console.Write("[project setup] [build setup] list of folders to add to include path (seprated by spaces) (hit \"enter\" for none): ");
+                        includes = (Console.ReadLine().Split(' ').ToList());
+
+                        Console.Write("[project setup] Generatiing project files");
+
+                        
+                        XmlDocument doc = new XmlDocument();
+                        doc.PreserveWhitespace = true;
+
+                        string s = string.Format("<project>\n    <build name=\"{0}\" default=\"true\">\n        <source>*.cpp</source>\n        <output>bin\\{1}.exe</output>\n        </build>\n\n    <modules>\n        \n    </modules>\n</project>", appName, appName);
+                        doc.LoadXml(s);
+
+                        XmlElement buildContainer = doc.GetElementsByTagName("build")[0] as XmlElement;
+
+                        if (!string.IsNullOrEmpty(manifest))
+                        {
+                            XmlNode node = doc.CreateNode("element", "manifest", "");
+                            node.InnerText = manifest;
+
+                            buildContainer.AppendChild(node);
+                        }
+
+                        if (!string.IsNullOrEmpty(resource))
+                        {
+                            XmlNode node = doc.CreateNode("element", "resource", "");
+                            node.InnerText = resource;
+
+                            buildContainer.AppendChild(node);
+                        }
+
+                        foreach (string str in defines)
+                        {
+                            XmlNode node = doc.CreateNode("element", "define", "");
+                            node.InnerText = str;
+
+                            buildContainer.AppendChild(node);
+                        }
+
+                        foreach (string str in includes)
+                        {
+                            XmlNode node = doc.CreateNode("element", "include", "");
+                            node.InnerText = str;
+
+                            buildContainer.AppendChild(node);
+                        }
+
+                        doc.Save(".\\project.proj");
+
+                        DirectoryInfo modulesDirInfo = Directory.CreateDirectory(".\\modules");
+
+                        foreach (FileInfo file in modulesDirInfo.GetFiles())
+                        {
+                            file.Delete(); 
+                        }
+                        foreach (DirectoryInfo dir in modulesDirInfo.GetDirectories())
+                        {
+                            dir.Delete(true); 
+                        }
+
+                        Directory.CreateDirectory(".\\bin");
+
+                        project = new Project();
+                        project.Initilize(GetProjectFilePathFromDirectory());
                     }
                     break;
 
-                    case "remove-package":
+                    case "remove-module":
                     {
+                        string moduleName = paramaters[1];
+                        
+                        if (!project.modules.Select((e) => e.name).Contains(moduleName))
+                        {
+                            Error();
+                            Console.WriteLine("No installed module named \"{0}\" could be found. To install this module use \"pacman install {1}\"", moduleName, moduleName);
+                            invalidCommand = true;
+                            break;
+                        }
 
+                        Console.ForegroundColor = ConsoleColor.DarkYellow;
+                        Console.WriteLine("[uninstaller] Preparing to uninstall {0}\n[uninstaller] Fetching module details...\n[uninstaller] Removing module files...", moduleName);
+
+                        Project.ModuleInfo mod = project.GetModuleByName(moduleName);
+
+                        Console.WriteLine("[uninstaller] Module details found, deleting module files");
+
+                        project.DeleteModule(mod);
+
+                        Console.WriteLine("[uninstaller] Sucessfully removed all module files\n[uninstaller] Removing module from project...");
+
+                        project.RemoveModule(moduleName);
+
+                        Console.WriteLine("[uninstaller] Sucessfully removed module from project");
                     }
                     break;
+
+                    default:
+                    {
+                        invalidCommand = true;
+                    }
+                    break;
+                }
+
+                if (!invalidCommand)
+                {
+                    Console.Write("\n");                
+                    PrintStatus(project);
                 }
             }
             else
             {
+                invalidCommand = true;
                 PrintHelp();
             }
 
@@ -115,6 +267,58 @@ namespace PacMan
         private static void PrintHeadder()
         {
             Console.WriteLine("PacMan Package Manager v1.0.0");
+        }
+
+        private static void PrintStatus(Project project)
+        {
+            Console.ResetColor();
+            Console.WriteLine("*-----------------------STATUS-----------------------*");
+
+            Console.Write    ("|");
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.Write     (" Modules Added: [{0}]       ", project.status.modulesAdded);
+            Console.ResetColor();
+            Console.Write                                ("|");
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.Write                              ("    Modules Removed: [{0}] ", project.status.modulesRemoved);
+            Console.ResetColor();
+            Console.Write                                                         ("|\n");
+
+            Console.Write    ("|");
+            Console.ForegroundColor = ConsoleColor.DarkGreen;
+            Console.Write     (" Modules Downloaded: [{0}]  ", project.status.modulesDownloaded);
+            Console.ResetColor();
+            Console.Write                                ("|");
+            Console.ForegroundColor = ConsoleColor.DarkRed;
+            Console.Write                              ("    Modules Deleted: [{0}] ", project.status.modulesDeleted);
+            Console.ResetColor();
+            Console.Write                                                         ("|\n");
+
+            // Console.WriteLine("|                          |                         |");
+            Console.WriteLine("|--------------------------*-------------------------|");
+            // Console.WriteLine("|                          |                         |");
+
+            Console.Write    ("|");
+            Console.ForegroundColor = ConsoleColor.Blue;
+            Console.Write     (" Modules Changed: [{0}]     ", project.status.modulesChanged);
+            Console.ResetColor();
+            Console.Write                                ("|");
+            Console.ForegroundColor = ConsoleColor.Magenta;
+            Console.Write                              ("    Modules Updated: [{0}] ", project.status.modulesUpdated);
+            Console.ResetColor();
+            Console.Write                                                         ("|\n");
+
+            Console.Write    ("|");
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.Write     (" Modules With Errors: [{0}] ", project.status.modulesWithErrors);
+            Console.ResetColor();
+            Console.Write                                ("|");
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.Write                              ("      Total Modules: [{0}] ", project.modules.Count);
+            Console.ResetColor();
+            Console.Write                                                         ("|\n");
+
+            Console.WriteLine("*----------------------------------------------------*");
         }
 
         private static void PrintHelp()
@@ -142,6 +346,21 @@ namespace PacMan
             public bool exists => System.IO.File.Exists(modfilePath);
         }
 
+        public class Status
+        {
+            public int modulesAdded = 0;
+            public int modulesDownloaded = 0;
+            public int modulesRemoved = 0;
+            public int modulesDeleted = 0;
+            public int modulesChanged = 0;
+            public int modulesUpdated = 0;
+            public int modulesWithErrors = 0;
+
+            public Status()
+            {
+            }
+        }
+
         public const string githubQuerryString = "https://github.com/topics/pacman-package?q=";
         public const string gitUrlSeed = "https://github.com/";
         public const string gitCloneString = "git clone --quiet ";
@@ -153,6 +372,8 @@ namespace PacMan
         public string projectFolder {get; internal set;} = "";
         public bool initilized {get; private set;} = false;
         public XmlDocument projXml {get; private set;} = null;
+
+        public Status status {get; private set;} = new Status();
 
         public List<ModuleInfo> modules = new List<ModuleInfo>();
 
@@ -185,6 +406,19 @@ namespace PacMan
             }
         }
 
+        public ModuleInfo GetModuleByName(string name)
+        {
+            int index = modules.Select((m) => m.name).ToList().IndexOf(name);
+            if (index == -1)
+            {
+                return null;
+            }
+            else
+            {
+                return modules[index];
+            }
+        }
+
         private ModuleInfo ModuleInfoFromName(string name)
         {
             ModuleInfo module = new ModuleInfo();
@@ -208,7 +442,76 @@ namespace PacMan
             
             projXml.Save(projFilePath);
 
+            status.modulesAdded++;
+            status.modulesChanged++;
+
             return module;
+        }
+
+        public bool RemoveModule(string modName)
+        {
+            XmlNodeList modulesNodes = projXml.GetElementsByTagName("module");
+
+            bool removed = false;
+            foreach (XmlNode node in modulesNodes)
+            {
+                if (node.InnerText == modName)
+                {
+                    removed = true;
+                    node.ParentNode.RemoveChild(node);
+
+                    modules.Remove(modules[modules.Select((m) => m.name).ToList().IndexOf(modName)]);
+
+                    projXml.Save(projFilePath);
+                    break;
+                }
+            }
+
+            status.modulesRemoved++;
+            status.modulesChanged++;
+
+            return removed;
+        }
+
+        public void DeleteModule(ModuleInfo mod)
+        {
+            if (mod.exists)
+            {                
+                // remove the files
+                Process process = new Process();
+                ProcessStartInfo startInfo = new ProcessStartInfo();
+                startInfo.WindowStyle = ProcessWindowStyle.Hidden;
+                startInfo.FileName = "cmd.exe";
+                startInfo.Arguments = "/C cd " + projectFolder + "\\.\\modules && rd /s /q " + mod.name;
+                process.StartInfo = startInfo;
+
+                process.Start();
+                
+                // process.WaitForExit();
+                WaitLoader(() => process.HasExited);
+
+                status.modulesDeleted++;
+            }
+            else
+            {
+                throw new FileNotFoundException("Could not find the module files.");
+            }
+        }
+
+        private void WaitLoader(Func<bool> check)
+        {
+            int animationCount = 0;
+            while (check() == false)
+            {
+                // do the animation
+                Console.Write(waitingAnimationString[animationCount % waitingAnimationString.Length]);
+                animationCount++;
+
+                System.Threading.Thread.Sleep(100);
+                
+                // backspace to delete old character
+                Console.Write("\b");
+            }
         }
 
         // returns false if the module already is installed
@@ -216,9 +519,9 @@ namespace PacMan
         {
             if (!mod.exists)
             {
-                System.Diagnostics.Process process = new System.Diagnostics.Process();
-                System.Diagnostics.ProcessStartInfo startInfo = new System.Diagnostics.ProcessStartInfo();
-                startInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+                Process process = new Process();
+                ProcessStartInfo startInfo = new ProcessStartInfo();
+                startInfo.WindowStyle = ProcessWindowStyle.Hidden;
                 startInfo.FileName = "cmd.exe";
                 startInfo.Arguments = "/C cd " + projectFolder + "\\.\\modules && " + gitCloneString + mod.gitURL;
                 process.StartInfo = startInfo;
@@ -226,24 +529,23 @@ namespace PacMan
                 process.Start();
                 
                 // process.WaitForExit();
-                int animationCount = 0;
-                while (!process.HasExited)
-                {
-                    // do the animation
-                    Console.Write(waitingAnimationString[animationCount % waitingAnimationString.Length]);
-                    animationCount++;
+                WaitLoader(() => process.HasExited);
 
-                    System.Threading.Thread.Sleep(100);
-                    
-                    // backspace to delete old character
-                    Console.Write("\b");
-                }
+                status.modulesDownloaded++;
 
                 return true;
             }
             else
             {
                 return false;
+            }
+        }
+
+        public void UpdateModule(ModuleInfo mod)
+        {
+            if (true)
+            {
+                
             }
         }
 
