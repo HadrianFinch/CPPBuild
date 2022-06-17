@@ -1,4 +1,3 @@
-// by the way, pacman stands for Package Manager
 #define PACMANBUILD
 
 using System;
@@ -73,33 +72,54 @@ namespace PacMan
                     }
                     break;
 
-                    // case "update":
-                    // {
-                    //     List<Project.ModuleInfo> modulesToUpdate = new List<Project.ModuleInfo>();
-                    //     if (paramaters.Length > 1)
-                    //     {
-                    //         for (int i = 1; i < paramaters.Length; i++)
-                    //         {
-                    //             string name = paramaters[i];
-                    //             Project.ModuleInfo mod = project.GetModuleByName(name);
+                    case "update":
+                    {
+                        List<Project.ModuleInfo> modulesToUpdate = new List<Project.ModuleInfo>();
+                        if (paramaters.Length > 1)
+                        {
+                            for (int i = 1; i < paramaters.Length; i++)
+                            {
+                                string name = paramaters[i];
+                                Project.ModuleInfo mod = project.GetModuleByName(name);
 
-                    //             if (mod == null)
-                    //             {
-                    //                 Error();
-                    //                 Console.WriteLine("No installed module with name {0} could be found!", name);
-                    //                 invalidCommand = true;
-                    //                 break;
-                    //             }
+                                if (mod == null)
+                                {
+                                    Error();
+                                    Console.WriteLine("No installed module with name {0} could be found!", name);
+                                    invalidCommand = true;
+                                    break;
+                                }
 
-                    //             modulesToUpdate.Add(mod);
-                    //         }
-                    //     }
-                    //     else
-                    //     {
+                                modulesToUpdate.Add(mod);
+                            }
+                        }
+                        else
+                        {
+                            foreach (Project.ModuleInfo mod in project.modules)
+                            {
+                                modulesToUpdate.Add(mod);
+                            }
+                        }
 
-                    //     }
-                    // }
-                    // break;
+                        foreach (Project.ModuleInfo mod in modulesToUpdate)
+                        {
+                            Console.ForegroundColor = ConsoleColor.Magenta;
+                            string updateMessage = string.Format("[updater] updating module {0}", mod.name);
+                            Console.WriteLine(updateMessage);
+
+                            bool b = project.UpdateModule(mod);
+
+                            if (b)
+                            {
+                                Console.WriteLine("[updater] Sucessfully updated {0}", mod.name);
+                            }
+                            else
+                            {
+                                Console.WriteLine("[updater] No updates available for {0}, the latest version is already installed", mod.name);
+                            }
+                        }
+                    }
+                    break;
 
                     // case "upgrade":
                     // {
@@ -541,12 +561,31 @@ namespace PacMan
             }
         }
 
-        public void UpdateModule(ModuleInfo mod)
+        public bool UpdateModule(ModuleInfo mod)
         {
-            if (true)
+            Process cmd = new Process();
+            cmd.StartInfo.FileName = "cmd.exe";
+            cmd.StartInfo.Arguments = "/C cd " + projectFolder + "\\.\\modules\\" + mod.name + " && git pull";
+            cmd.StartInfo.UseShellExecute = false;
+            cmd.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+            cmd.StartInfo.RedirectStandardOutput = true;
+            cmd.Start();
+
+            WaitLoader(() => cmd.HasExited);
+
+            StreamReader sr = cmd.StandardOutput;
+            string output = sr.ReadToEnd();
+
+            if (output.Contains("Already up to date."))
             {
-                
+                return false;
             }
+
+            status.modulesUpdated++;
+            status.modulesDownloaded++;
+            status.modulesChanged++;
+
+            return true;
         }
 
         public static string GetGitUrlFromModuleName(string name)
