@@ -1,4 +1,4 @@
-#define PACMANBUILD
+// #define CPACKBUILD
 
 using System;
 using System.Collections;
@@ -11,11 +11,11 @@ using System.Net;
 using System.Linq;
 
 
-namespace PacMan
+namespace Cpack
 {
-    internal static class PacManApp
+    internal static class CpackApp
     {
-        #if PACMANBUILD
+        #if CPACKBUILD
 
         static int Main(string[] paramaters)
         {
@@ -33,7 +33,7 @@ namespace PacMan
                 if (paramaters[0] != "init")
                 {
                     project = new Project();
-                    project.Initilize(GetProjectFilePathFromDirectory());
+                    project.Initilize(Project.GetProjectFilePathFromDirectory());
                 }
 
                 switch (paramaters[0])
@@ -45,7 +45,7 @@ namespace PacMan
                         if (project.modules.Select((e) => e.name).Contains(moduleName))
                         {
                             Error();
-                            Console.WriteLine("A module named \"{0}\" already is installed. To update this module use \"pacman update {1}\"", moduleName, moduleName);
+                            Console.WriteLine("A module named \"{0}\" already is installed. To update this module use \"cpack update {1}\"", moduleName, moduleName);
                             invalidCommand = true;
                             break;
                         }
@@ -184,20 +184,26 @@ namespace PacMan
                             buildContainer.AppendChild(node);
                         }
 
-                        foreach (string str in defines)
+                        if (!string.IsNullOrEmpty(defines[0]))
                         {
-                            XmlNode node = doc.CreateNode("element", "define", "");
-                            node.InnerText = str;
+                            foreach (string str in defines)
+                            {
+                                XmlNode node = doc.CreateNode("element", "define", "");
+                                node.InnerText = str;
 
-                            buildContainer.AppendChild(node);
+                                buildContainer.AppendChild(node);
+                            }
                         }
 
-                        foreach (string str in includes)
+                        if (!string.IsNullOrEmpty(includes[0]))
                         {
-                            XmlNode node = doc.CreateNode("element", "include", "");
-                            node.InnerText = str;
+                            foreach (string str in includes)
+                            {
+                                XmlNode node = doc.CreateNode("element", "include", "");
+                                node.InnerText = str;
 
-                            buildContainer.AppendChild(node);
+                                buildContainer.AppendChild(node);
+                            }
                         }
 
                         doc.Save(".\\project.proj");
@@ -216,7 +222,7 @@ namespace PacMan
                         Directory.CreateDirectory(".\\bin");
 
                         project = new Project();
-                        project.Initilize(GetProjectFilePathFromDirectory());
+                        project.Initilize(Project.GetProjectFilePathFromDirectory());
                     }
                     break;
 
@@ -227,7 +233,7 @@ namespace PacMan
                         if (!project.modules.Select((e) => e.name).Contains(moduleName))
                         {
                             Error();
-                            Console.WriteLine("No installed module named \"{0}\" could be found. To install this module use \"pacman install {1}\"", moduleName, moduleName);
+                            Console.WriteLine("No installed module named \"{0}\" could be found. To install this module use \"cpack install {1}\"", moduleName, moduleName);
                             invalidCommand = true;
                             break;
                         }
@@ -272,11 +278,6 @@ namespace PacMan
             return 0;
         }
 
-        private static string GetProjectFilePathFromDirectory()
-        {
-            string[] strings = Directory.GetFiles(".", "*.proj");
-            return strings[0];
-        }
 
         private static void Error()
         {
@@ -286,7 +287,7 @@ namespace PacMan
 
         private static void PrintHeadder()
         {
-            Console.WriteLine("PacMan Package Manager v1.0.0");
+            Console.WriteLine("Cpack Package Manager v1.0.0");
         }
 
         private static void PrintStatus(Project project)
@@ -358,6 +359,11 @@ namespace PacMan
 
     public class Project
     {
+        public static string GetProjectFilePathFromDirectory()
+        {
+            string[] strings = Directory.GetFiles(".", "*.proj");
+            return strings[0];
+        }
         public class ModuleInfo
         {
             public string name = "";
@@ -381,7 +387,7 @@ namespace PacMan
             }
         }
 
-        public const string githubQuerryString = "https://github.com/topics/pacman-package?q=";
+        public const string githubQuerryString = "https://github.com/topics/cpack-package?q=";
         public const string gitUrlSeed = "https://github.com/";
         public const string gitCloneString = "git clone --quiet ";
         public const string gitHtmlSearchStringStart = "            ";

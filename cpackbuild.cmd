@@ -1,0 +1,1 @@
+csc.exe cpack.cs -define:CPACKBUILD -out:cpack.exe

@@ -1,10 +1,10 @@
 <project>
-    <build name="FoobarTest" default="true">
+    <build name="sdgds" default="true">
         <source>*.cpp</source>
-        <output>FoobarTest.exe</output>
+        <output>bin\sdgds.exe</output>
         <define></define><include></include></build>
 
     <modules>
         
-    <module>FileIO</module></modules>
+    </modules>
 </project>

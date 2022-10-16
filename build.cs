@@ -1,12 +1,14 @@
+#define BUILDBUILD
 
 using System;
+using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Xml;
 using System.Runtime.InteropServices;
 
-using PacMan;
+using Cpack;
 
 namespace Build
 {
@@ -18,21 +20,21 @@ namespace Build
         static int Main(string[] paramaters)
         {
             bool anyFails = false;
-            if ((paramaters.Length > 0) && 
-                (paramaters[0] != "--help") && (paramaters[0] != "-h") &&
-                (paramaters[0] != "/?") && (paramaters[0] != "/h"))
+            
+            if ((!paramaters.Contains("--help")) && (!paramaters.Contains("-h")) &&
+                (!paramaters.Contains("/?")) && (!paramaters.Contains("/h")))
             {
                 Builder.XMLBuildTargets buildInfo = Builder.XMLBuildTargets.Default;
                 List<string> targetNames = new List<string>();
 
-                if (paramaters.Length >= 2)
+                if (paramaters.Length >= 1)
                 {
                     buildInfo = GetXMLBuildTargetsFromString(paramaters[1]);
                     if (buildInfo == Builder.XMLBuildTargets.ByName)
                     {
-                        if (paramaters.Length > 2)
+                        if (paramaters.Length > 1)
                         {
-                            for (int i = 1; i < paramaters.Length; i++)
+                            for (int i = 0; i < paramaters.Length; i++)
                             {
                                 if ((paramaters[i].ToCharArray()[0] != '-') &&
                                     (paramaters[i].ToCharArray()[0] != '/'))
@@ -57,7 +59,7 @@ namespace Build
 
                 PreBuild();
                 Console.WriteLine("Generating Build Commands...");
-                List<BuildCommand> commands = Builder.GenerateBuildCommandsFromXML(paramaters[0], buildInfo, targetNames);
+                List<BuildCommand> commands = Builder.GenerateBuildCommandsFromXML(Project.GetProjectFilePathFromDirectory(), buildInfo, targetNames);
                 
                 if (commands == null)
                 {
